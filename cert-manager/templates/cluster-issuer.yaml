@@ -17,7 +17,9 @@ spec:
             groupName: {{ .Values.clusterIssuer.groupName }}
             solverName: godaddy
             config:
-              authApiKey: godaddy-credentials
+              apiKeySecretRef:
+                name: godaddy-api-key
+                key: token
               production: true
               ttl: 600
         selector:
@@ -43,7 +45,9 @@ spec:
             groupName: {{ .Values.clusterIssuer.groupName }}
             solverName: godaddy
             config:
-              authApiKey: godaddy-credentials
+              apiKeySecretRef:
+                name: godaddy-api-key
+                key: token
               production: true
               ttl: 600
         selector:
