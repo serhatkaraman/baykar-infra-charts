@@ -220,6 +220,9 @@ extraObjects:
             revision: master
             files:
               - path: "kube-prometheus-stack/Chart.yaml"
+              - path: "loki/Chart.yaml"
+              - path: "alloy/Chart.yaml"
+              - path: "metrics-server/Chart.yaml"
       template:
         metadata:
           name: 'baykar-case-{{ "{{" }} index .path.segments 0 {{ "}}" }}'
