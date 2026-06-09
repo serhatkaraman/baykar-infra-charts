@@ -133,7 +133,7 @@ vault:
   # Prometheus ServiceMonitor
   serverTelemetry:
     serviceMonitor:
-      enabled: true
+      enabled: false
       selectors:
         release: baykar-case-kube-prometheus-stack
       interval: 30s
