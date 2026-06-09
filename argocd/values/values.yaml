@@ -48,8 +48,6 @@ configs:
     plugins:
       avp-helm:
         allowConcurrency: true
-        discover:
-          fileName: ""
         generate:
           command:
             - bash
@@ -299,24 +297,24 @@ extraObjects:
 ## Application controller
 controller:
   name: application-controller
-  replicas: 2
+  replicas: 1
   dynamicClusterDistribution: true
   heartbeatTime: 10
   revisionHistoryLimit: 5
 
   pdb:
-    enabled: true
+    enabled: false
     labels: {}
     annotations: {}
     maxUnavailable: "50%"
 
   resources:
     limits:
-      cpu: "2"
-      memory: 4Gi
-    requests:
       cpu: 500m
-      memory: 1Gi
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
 
   containerSecurityContext:
     runAsNonRoot: true
@@ -432,24 +430,24 @@ redisSecretInit:
 ## Server
 server:
   name: server
-  replicas: 2
+  replicas: 1
 
   autoscaling:
     enabled: false
 
   pdb:
-    enabled: true
+    enabled: false
     labels: {}
     annotations: {}
     maxUnavailable: "50%"
 
   resources:
     limits:
-      cpu: 500m
-      memory: 512Mi
+      cpu: 300m
+      memory: 128Mi
     requests:
-      cpu: 250m
-      memory: 256Mi
+      cpu: 50m
+      memory: 64Mi
 
   containerSecurityContext:
     runAsNonRoot: true
@@ -534,24 +532,24 @@ server:
 ## Repo Server
 repoServer:
   name: repo-server
-  replicas: 2
+  replicas: 1
 
   autoscaling:
     enabled: false
 
   pdb:
-    enabled: true
+    enabled: false
     labels: {}
     annotations: {}
     maxUnavailable: "50%"
 
   resources:
     limits:
-      cpu: "2"
-      memory: 4Gi
-    requests:
       cpu: 500m
-      memory: 1Gi
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
 
   containerSecurityContext:
     runAsNonRoot: true
@@ -608,7 +606,7 @@ repoServer:
   extraContainers:
     - name: avp-helm
       command: [/var/run/argocd/argocd-cmp-server]
-      image: quay.io/argoproj/argocd:v2.14.11
+      image: quay.io/argoproj/argocd:v3.3.5
       envFrom:
       env:
         - name: AVP_TYPE
@@ -643,11 +641,11 @@ repoServer:
             - ALL
       resources:
         requests:
-          cpu: 250m
-          memory: 512Mi
+          cpu: 50m
+          memory: 128Mi
         limits:
-          cpu: "2"
-          memory: 4Gi
+          cpu: 500m
+          memory: 256Mi
       volumeMounts:
         - mountPath: /var/run/argocd
           name: var-files
@@ -690,18 +688,18 @@ applicationSet:
   replicas: 1
 
   pdb:
-    enabled: true
+    enabled: false
     labels: {}
     annotations: {}
     maxUnavailable: "50%"
 
   resources:
     limits:
-      cpu: 500m
-      memory: 512Mi
+      cpu: 200m
+      memory: 128Mi
     requests:
-      cpu: 250m
-      memory: 256Mi
+      cpu: 50m
+      memory: 64Mi
 
   containerSecurityContext:
     runAsNonRoot: true
@@ -754,11 +752,11 @@ notifications:
 
   resources:
     limits:
-      cpu: 250m
-      memory: 256Mi
-    requests:
       cpu: 100m
-      memory: 128Mi
+      memory: 64Mi
+    requests:
+      cpu: 50m
+      memory: 32Mi
 
   containerSecurityContext:
     runAsNonRoot: true
