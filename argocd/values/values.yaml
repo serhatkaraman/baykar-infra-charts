@@ -148,6 +148,34 @@ extraObjects:
           kind: "*"
 
   ###########################################################################
+  # Application - ArgoCD (self-managed, normal helm - no AVP)
+  ###########################################################################
+  - apiVersion: argoproj.io/v1alpha1
+    kind: Application
+    metadata:
+      name: baykar-case-argocd
+      namespace: argocd
+    spec:
+      project: baykar-case
+      source:
+        repoURL: "https://github.com/serhatkaraman/baykar-infra-charts"
+        targetRevision: master
+        path: argocd
+        helm:
+          valueFiles:
+            - values/values.yaml
+      destination:
+        server: "https://kubernetes.default.svc"
+        namespace: argocd
+      syncPolicy:
+        automated:
+          prune: false
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true
+
+  ###########################################################################
   # Application - Vault (normal helm, no AVP needed)
   ###########################################################################
   - apiVersion: argoproj.io/v1alpha1
