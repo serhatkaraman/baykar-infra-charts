@@ -162,6 +162,7 @@ extraObjects:
         targetRevision: master
         path: argocd
         helm:
+          releaseName: argocd
           valueFiles:
             - values/values.yaml
       destination:
