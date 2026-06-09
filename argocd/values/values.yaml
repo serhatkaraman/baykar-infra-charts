@@ -1,0 +1,810 @@
+nameOverride: argocd
+fullnameOverride: ""
+namespaceOverride: "argocd"
+
+global:
+  domain: argocd.myturkishdish.com
+  logging:
+    format: text
+    level: info
+  affinity:
+    podAntiAffinity: none
+    nodeAffinity:
+      type: none
+
+configs:
+  cm:
+    url: https://argocd.myturkishdish.com
+    resource.customizations.ignoreDifferences.apps_StatefulSet: |
+      jqPathExpressions:
+        - .spec.volumeClaimTemplates[]?.apiVersion
+        - .spec.volumeClaimTemplates[]?.kind
+        - .spec.template.spec.affinity
+    resource.customizations.ignoreDifferences.apps_Deployment: |
+      jqPathExpressions:
+        - .spec.template.spec.affinity
+
+  rbac:
+    policy.csv: |
+      p, role:admin, applications, *, */*, allow
+      p, role:admin, projects, *, *, allow
+      p, role:admin, repositories, *, *, allow
+      p, role:admin, clusters, *, *, allow
+      p, role:admin, accounts, *, *, allow
+      p, role:admin, certificates, *, *, allow
+      p, role:admin, logs, *, *, allow
+      p, role:admin, exec, *, */*, allow
+    policy.default: "role:admin"
+    scopes: "[]"
+
+  tls:
+    annotations: {}
+    certificates: {}
+    create: true
+
+  cmp:
+    create: true
+    annotations: {}
+    plugins:
+      avp-helm:
+        allowConcurrency: true
+        discover:
+          fileName: ""
+        generate:
+          command:
+            - bash
+            - "-c"
+            - |
+              export HELM_CONFIG_HOME=/tmp/helm-config
+              export HELM_CACHE_HOME=/tmp/helm-cache
+              export HELM_DATA_HOME=/tmp/helm-data
+              if [ -f Chart.yaml ] && grep -q 'repository:' Chart.yaml; then
+                for repo in $(grep 'repository:' Chart.yaml | grep 'http' | awk '{print $2}' | tr -d '"' | sort -u); do
+                  if echo "$repo" | grep -q 'github'; then
+                    helm repo add $(echo $repo | md5sum | cut -d' ' -f1) "$repo" --username "$GITHUB_USERNAME" --password "$GITHUB_PASSWORD" > /dev/null 2>&1 || true
+                  else
+                    helm repo add $(echo $repo | md5sum | cut -d' ' -f1) "$repo" > /dev/null 2>&1 || true
+                  fi
+                done
+                helm repo update > /dev/null 2>&1 || true
+                helm dependency build . > /dev/null 2>&1 || true
+              fi
+              helm template $ARGOCD_APP_NAME --include-crds -n $ARGOCD_APP_NAMESPACE ${ARGOCD_ENV_HELM_ARGS} . |
+              argocd-vault-plugin generate -
+        lockRepo: false
+
+  clusterCredentials:
+    baykar-case:
+      server: https://kubernetes.default.svc
+      name: baykar-case
+      config: {}
+
+  credentialTemplates: {}
+  credentialTemplatesAnnotations: {}
+
+  repositories:
+    baykar-infra-charts:
+      url: "https://github.com/serhatkaraman/baykar-infra-charts"
+    baykar-app-charts:
+      url: "https://github.com/serhatkaraman/baykar-app-charts"
+  repositoriesAnnotations: {}
+
+  secret:
+    createSecret: true
+    labels: {}
+    annotations: {}
+    githubSecret: ""
+    gitlabSecret: ""
+    bitbucketServerSecret: ""
+    bitbucketUUID: ""
+    gogsSecret: ""
+    azureDevops:
+      username: ""
+      password: ""
+    extra: {}
+    argocdServerAdminPassword: ""
+    argocdServerAdminPasswordMtime: ""
+
+  styles: ""
+
+extraObjects:
+  ###########################################################################
+  # AppProjects
+  ###########################################################################
+  - apiVersion: argoproj.io/v1alpha1
+    kind: AppProject
+    metadata:
+      name: baykar-case
+      namespace: argocd
+    spec:
+      description: Baykar Case infra project
+      sourceRepos:
+        - "https://github.com/serhatkaraman/baykar-infra-charts"
+      destinations:
+        - namespace: "*"
+          server: "https://kubernetes.default.svc"
+      clusterResourceWhitelist:
+        - group: "*"
+          kind: "*"
+      namespaceResourceWhitelist:
+        - group: "*"
+          kind: "*"
+
+  - apiVersion: argoproj.io/v1alpha1
+    kind: AppProject
+    metadata:
+      name: baykar-case-apps
+      namespace: argocd
+    spec:
+      description: Baykar Case apps project
+      sourceRepos:
+        - "https://github.com/serhatkaraman/baykar-app-charts"
+      destinations:
+        - namespace: "*"
+          server: "https://kubernetes.default.svc"
+      clusterResourceWhitelist:
+        - group: "*"
+          kind: "*"
+      namespaceResourceWhitelist:
+        - group: "*"
+          kind: "*"
+
+  ###########################################################################
+  # Application - ArgoCD (self-managed, normal helm)
+  ###########################################################################
+  - apiVersion: argoproj.io/v1alpha1
+    kind: Application
+    metadata:
+      name: baykar-case-argocd
+      namespace: argocd
+    spec:
+      project: baykar-case
+      source:
+        repoURL: "https://github.com/serhatkaraman/baykar-infra-charts"
+        targetRevision: master
+        path: argocd
+        helm:
+          valueFiles:
+            - values/values.yaml
+      destination:
+        server: "https://kubernetes.default.svc"
+        namespace: argocd
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true
+
+  ###########################################################################
+  # Application - Vault (normal helm, no AVP needed)
+  ###########################################################################
+  - apiVersion: argoproj.io/v1alpha1
+    kind: Application
+    metadata:
+      name: baykar-case-vault
+      namespace: argocd
+    spec:
+      project: baykar-case
+      source:
+        repoURL: "https://github.com/serhatkaraman/baykar-infra-charts"
+        targetRevision: master
+        path: vault
+        helm:
+          valueFiles:
+            - values.yaml
+      destination:
+        server: "https://kubernetes.default.svc"
+        namespace: vault
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true
+
+  ###########################################################################
+  # ApplicationSet - Infra
+  ###########################################################################
+  - apiVersion: argoproj.io/v1alpha1
+    kind: ApplicationSet
+    metadata:
+      name: baykar-case-infra
+      namespace: argocd
+    spec:
+      goTemplate: true
+      goTemplateOptions: ["missingkey=error"]
+      generators:
+        - git:
+            repoURL: "https://github.com/serhatkaraman/baykar-infra-charts"
+            revision: master
+            files:
+              - path: "*/Chart.yaml"
+              - path: "argocd/Chart.yaml"
+                exclude: true
+              - path: "vault/Chart.yaml"
+                exclude: true
+      template:
+        metadata:
+          name: 'baykar-case-{{ "{{" }} index .path.segments 0 {{ "}}" }}'
+          namespace: argocd
+        spec:
+          project: baykar-case
+          source:
+            repoURL: "https://github.com/serhatkaraman/baykar-infra-charts"
+            targetRevision: master
+            path: '{{ "{{" }} index .path.segments 0 {{ "}}" }}'
+            plugin:
+              name: avp-helm
+              env:
+                - name: HELM_ARGS
+                  value: "-f values.yaml"
+          destination:
+            server: "https://kubernetes.default.svc"
+            namespace: '{{ "{{" }} index .path.segments 0 {{ "}}" }}'
+          syncPolicy:
+            automated:
+              prune: true
+              selfHeal: true
+            syncOptions:
+              - CreateNamespace=true
+              - ServerSideApply=true
+
+  ###########################################################################
+  # ApplicationSet - Apps Dev
+  ###########################################################################
+  - apiVersion: argoproj.io/v1alpha1
+    kind: ApplicationSet
+    metadata:
+      name: baykar-case-apps-dev
+      namespace: argocd
+    spec:
+      goTemplate: true
+      goTemplateOptions: ["missingkey=error"]
+      generators:
+        - git:
+            repoURL: "https://github.com/serhatkaraman/baykar-app-charts"
+            revision: master
+            files:
+              - path: "*/values/dev/values.yaml"
+      template:
+        metadata:
+          name: 'baykar-case-dev-{{ "{{" }} index .path.segments 0 {{ "}}" }}'
+          namespace: argocd
+        spec:
+          project: baykar-case-apps
+          source:
+            repoURL: "https://github.com/serhatkaraman/baykar-app-charts"
+            targetRevision: master
+            path: '{{ "{{" }} index .path.segments 0 {{ "}}" }}'
+            plugin:
+              name: avp-helm
+              env:
+                - name: HELM_ARGS
+                  value: "-f values/dev/values.yaml"
+          destination:
+            server: "https://kubernetes.default.svc"
+            namespace: '{{ "{{" }} printf "%s-dev" (index .path.segments 0) {{ "}}" }}'
+          syncPolicy:
+            automated:
+              prune: true
+              selfHeal: true
+            syncOptions:
+              - CreateNamespace=true
+              - ServerSideApply=true
+
+
+## Application controller
+controller:
+  name: application-controller
+  replicas: 2
+  dynamicClusterDistribution: true
+  heartbeatTime: 10
+  revisionHistoryLimit: 5
+
+  pdb:
+    enabled: true
+    labels: {}
+    annotations: {}
+    maxUnavailable: "50%"
+
+  resources:
+    limits:
+      cpu: "2"
+      memory: 4Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+
+  containerSecurityContext:
+    runAsNonRoot: true
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+    seccompProfile:
+      type: RuntimeDefault
+    capabilities:
+      drop:
+      - ALL
+
+  readinessProbe:
+    failureThreshold: 3
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    successThreshold: 1
+    timeoutSeconds: 1
+
+  affinity: {}
+
+  terminationGracePeriodSeconds: 30
+  automountServiceAccountToken: true
+
+  serviceAccount:
+    create: true
+    name: argocd-application-controller
+    annotations: {}
+    labels: {}
+    automountServiceAccountToken: true
+
+  metrics:
+    enabled: false
+
+  networkPolicy:
+    create: false
+
+## Dex - SSO disabled
+dex:
+  enabled: false
+
+## Redis - disabled in favor of redis-ha
+redis:
+  enabled: false
+
+## Redis HA
+redis-ha:
+  enabled: true
+  image:
+    repository: ecr-public.aws.com/docker/library/redis
+    tag: 8.2.3-alpine
+  exporter:
+    enabled: false
+  persistentVolume:
+    enabled: false
+  redis:
+    masterGroupName: argocd
+    config:
+      save: '""'
+  haproxy:
+    enabled: true
+    labels:
+      app.kubernetes.io/name: argocd-redis-ha-haproxy
+    image:
+      repository: ecr-public.aws.com/docker/library/haproxy
+    metrics:
+      enabled: false
+    hardAntiAffinity: false
+    additionalAffinities: {}
+    affinity: |
+      {}
+    tolerations: []
+    containerSecurityContext:
+      readOnlyRootFilesystem: true
+  auth: true
+  existingSecret: argocd-redis
+  hardAntiAffinity: false
+  additionalAffinities: {}
+  affinity: |
+    {}
+
+  tolerations: []
+  topologySpreadConstraints:
+    enabled: false
+  containerSecurityContext:
+    readOnlyRootFilesystem: true
+
+externalRedis:
+  host: ""
+  username: ""
+  password: ""
+  port: 6379
+  existingSecret: ""
+  secretAnnotations: {}
+
+redisSecretInit:
+  enabled: true
+  name: redis-secret-init
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+  serviceAccount:
+    create: true
+    name: ""
+    annotations: {}
+    automountServiceAccountToken: true
+
+## Server
+server:
+  name: server
+  replicas: 2
+
+  autoscaling:
+    enabled: false
+
+  pdb:
+    enabled: true
+    labels: {}
+    annotations: {}
+    maxUnavailable: "50%"
+
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+
+  containerSecurityContext:
+    runAsNonRoot: true
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+    seccompProfile:
+      type: RuntimeDefault
+    capabilities:
+      drop:
+      - ALL
+
+  readinessProbe:
+    enabled: true
+    failureThreshold: 3
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    successThreshold: 1
+    timeoutSeconds: 1
+
+  livenessProbe:
+    enabled: true
+    failureThreshold: 3
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    successThreshold: 1
+    timeoutSeconds: 1
+
+  affinity: {}
+
+  terminationGracePeriodSeconds: 30
+  automountServiceAccountToken: true
+
+  serviceAccount:
+    create: true
+    name: argocd-server
+    annotations: {}
+    labels: {}
+    automountServiceAccountToken: true
+
+  extensions:
+    enabled: false
+
+  service:
+    annotations: {}
+    labels: {}
+    type: ClusterIP
+    servicePortHttp: 80
+    servicePortHttps: 443
+    servicePortHttpName: http
+    servicePortHttpsName: https
+
+  metrics:
+    enabled: false
+
+  ingress:
+    enabled: true
+    controller: generic
+    labels: {}
+    annotations:
+      nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/ssl-passthrough: "true"
+      nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+    ingressClassName: "internal-ingress-nginx"
+    hostname: ""
+    path: /
+    pathType: Prefix
+    tls: true
+    extraHosts: []
+    extraPaths: []
+    extraRules: []
+    extraTls: []
+
+  certificate:
+    enabled: false
+
+  certificateSecret:
+    enabled: false
+
+  networkPolicy:
+    create: false
+
+## Repo Server
+repoServer:
+  name: repo-server
+  replicas: 2
+
+  autoscaling:
+    enabled: false
+
+  pdb:
+    enabled: true
+    labels: {}
+    annotations: {}
+    maxUnavailable: "50%"
+
+  resources:
+    limits:
+      cpu: "2"
+      memory: 4Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+
+  containerSecurityContext:
+    runAsNonRoot: true
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+    seccompProfile:
+      type: RuntimeDefault
+    capabilities:
+      drop:
+      - ALL
+
+  readinessProbe:
+    enabled: true
+    failureThreshold: 3
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    successThreshold: 1
+    timeoutSeconds: 1
+
+  livenessProbe:
+    enabled: true
+    failureThreshold: 3
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    successThreshold: 1
+    timeoutSeconds: 1
+
+  affinity: {}
+
+  terminationGracePeriodSeconds: 30
+  useEphemeralHelmWorkingDir: true
+  automountServiceAccountToken: true
+
+  volumes:
+    - name: cmp-plugin
+      configMap:
+        name: argocd-cmp-cm
+    - name: custom-tools
+      emptyDir: {}
+
+  initContainers:
+    - name: download-tools
+      image: alpine:3.20
+      command: [sh, -c]
+      args:
+        - >-
+          wget -O /custom-tools/argocd-vault-plugin
+          https://github.com/argoproj-labs/argocd-vault-plugin/releases/download/v1.18.1/argocd-vault-plugin_1.18.1_linux_amd64
+          && chmod +x /custom-tools/argocd-vault-plugin
+      volumeMounts:
+        - mountPath: /custom-tools
+          name: custom-tools
+
+  extraContainers:
+    - name: avp-helm
+      command: [/var/run/argocd/argocd-cmp-server]
+      image: quay.io/argoproj/argocd:v2.14.11
+      envFrom:
+      env:
+        - name: AVP_TYPE
+          value: vault
+        - name: AVP_VAULT_ADDR
+          value: http://baykar-case-vault.vault.svc.cluster.local:8200
+        - name: VAULT_ADDR
+          value: http://baykar-case-vault.vault.svc.cluster.local:8200
+        - name: AVP_AUTH_TYPE
+          value: k8s
+        - name: AVP_K8S_ROLE
+          value: avp
+        - name: GITHUB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: github-repo-creds
+              key: username
+        - name: GITHUB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: github-repo-creds
+              key: password
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        readOnlyRootFilesystem: true
+        allowPrivilegeEscalation: false
+        seccompProfile:
+          type: RuntimeDefault
+        capabilities:
+          drop:
+            - ALL
+      resources:
+        requests:
+          cpu: 250m
+          memory: 512Mi
+        limits:
+          cpu: "2"
+          memory: 4Gi
+      volumeMounts:
+        - mountPath: /var/run/argocd
+          name: var-files
+        - mountPath: /home/argocd/cmp-server/plugins
+          name: plugins
+        - mountPath: /tmp
+          name: tmp
+        - mountPath: /home/argocd/cmp-server/config/plugin.yaml
+          subPath: avp-helm.yaml
+          name: cmp-plugin
+        - mountPath: /usr/local/bin/argocd-vault-plugin
+          subPath: argocd-vault-plugin
+          name: custom-tools
+
+  serviceAccount:
+    create: true
+    name: ""
+    annotations: {}
+    labels: {}
+    automountServiceAccountToken: true
+
+  service:
+    annotations: {}
+    labels: {}
+    port: 8081
+    portName: tcp-repo-server
+
+  metrics:
+    enabled: false
+
+  certificateSecret:
+    enabled: false
+
+  networkPolicy:
+    create: false
+
+## ApplicationSet controller
+applicationSet:
+  name: applicationset-controller
+  replicas: 1
+
+  pdb:
+    enabled: true
+    labels: {}
+    annotations: {}
+    maxUnavailable: "50%"
+
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+
+  containerSecurityContext:
+    runAsNonRoot: true
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+    seccompProfile:
+      type: RuntimeDefault
+    capabilities:
+      drop:
+      - ALL
+
+  affinity: {}
+
+  terminationGracePeriodSeconds: 30
+  automountServiceAccountToken: true
+
+  serviceAccount:
+    create: true
+    name: argocd-applicationset-controller
+    annotations: {}
+    labels: {}
+    automountServiceAccountToken: true
+
+  service:
+    annotations: {}
+    labels: {}
+    type: ClusterIP
+    port: 7000
+    portName: http-webhook
+
+  metrics:
+    enabled: false
+
+  ingress:
+    enabled: false
+
+  allowAnyNamespace: false
+
+  networkPolicy:
+    create: false
+
+## Notifications controller
+notifications:
+  enabled: true
+  name: notifications-controller
+  argocdUrl: ""
+
+  pdb:
+    enabled: false
+
+  resources:
+    limits:
+      cpu: 250m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+  containerSecurityContext:
+    runAsNonRoot: true
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+    seccompProfile:
+      type: RuntimeDefault
+    capabilities:
+      drop:
+      - ALL
+
+  affinity: {}
+
+  terminationGracePeriodSeconds: 30
+  deploymentStrategy:
+    type: Recreate
+  automountServiceAccountToken: true
+
+  serviceAccount:
+    create: true
+    name: argocd-notifications-controller
+    annotations: {}
+    labels: {}
+    automountServiceAccountToken: true
+
+  cm:
+    create: true
+
+  secret:
+    create: true
+    name: "argocd-notifications-secret"
+    annotations: {}
+    labels: {}
+    items: {}
+
+  metrics:
+    enabled: false
+
+  notifiers: {}
+  subscriptions: []
+  templates: {}
+  triggers: {}
+
+  networkPolicy:
+    create: false
+
+## Commit server
+commitServer:
+  enabled: false
