@@ -165,7 +165,7 @@ kube-prometheus-stack:
       storageClassName: local-path
     ingress:
       enabled: true
-      ingressClassName: internal-ingress-nginx
+      ingressClassName: nginx
       hosts:
         - grafana.myturkishdish.com
       tls:
