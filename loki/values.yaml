@@ -96,7 +96,7 @@ loki:
         cpu: 200m
         memory: 256Mi
     nginxConfig:
-      resolver: "coredns.kube-system.svc.cluster.local."
+      resolver: "kube-dns.kube-system.svc.cluster.local."
     ingress:
       enabled: false
 
