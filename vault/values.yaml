@@ -54,7 +54,7 @@ vault:
 
     ingress:
       enabled: true
-      ingressClassName: internal-ingress-nginx
+      ingressClassName: nginx
       hosts:
         - host: vault.myturkishdish.com
           paths: []
