@@ -13,6 +13,8 @@ global:
       type: none
 
 configs:
+  params:
+    server.insecure: "true"
   cm:
     url: https://argocd.myturkishdish.com
     resource.customizations.ignoreDifferences.apps_StatefulSet: |
@@ -508,17 +510,19 @@ server:
     labels: {}
     annotations:
       nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
-      nginx.ingress.kubernetes.io/ssl-passthrough: "true"
-      nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
     ingressClassName: "nginx"
-    hostname: ""
+    hostname: "argocd.myturkishdish.com"
     path: /
     pathType: Prefix
     tls: true
     extraHosts: []
     extraPaths: []
     extraRules: []
-    extraTls: []
+    extraTls:
+      - hosts:
+          - argocd.myturkishdish.com
+        secretName: argocd-tls
 
   certificate:
     enabled: false
