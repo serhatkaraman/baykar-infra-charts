@@ -1,0 +1,8 @@
+apiVersion: v2
+name: kube-prometheus-stack
+version: 0.1.0
+description: kube-prometheus-stack for infoset-dev
+dependencies:
+  - name: kube-prometheus-stack
+    version: 82.14.1
+    repository: https://prometheus-community.github.io/helm-charts
