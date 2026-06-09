@@ -122,7 +122,7 @@ kube-prometheus-stack:
       storageSpec:
         volumeClaimTemplate:
           spec:
-            storageClassName: csi-disk-topology
+            storageClassName: local-path
             accessModes: ["ReadWriteOnce"]
             resources:
               requests:
@@ -162,7 +162,7 @@ kube-prometheus-stack:
       size: 3Gi
       accessModes:
         - ReadWriteOnce
-      storageClassName: csi-disk-topology
+      storageClassName: local-path
     ingress:
       enabled: true
       ingressClassName: internal-ingress-nginx
@@ -316,7 +316,7 @@ kube-prometheus-stack:
       storage:
         volumeClaimTemplate:
           spec:
-            storageClassName: csi-disk-topology
+            storageClassName: local-path
             accessModes: ["ReadWriteOnce"]
             resources:
               requests:
