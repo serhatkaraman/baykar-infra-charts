@@ -1,0 +1,8 @@
+apiVersion: v2
+name: metrics-server
+version: 0.1.0
+description: Kubernetes metrics-server for infoset-prod
+dependencies:
+  - name: metrics-server
+    version: 3.12.2
+    repository: https://kubernetes-sigs.github.io/metrics-server/

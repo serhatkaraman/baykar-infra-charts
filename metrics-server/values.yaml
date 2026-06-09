@@ -1,0 +1,29 @@
+metrics-server:
+  replicas: 2
+
+  args:
+    - --kubelet-insecure-tls
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 200Mi
+    limits:
+      memory: 500Mi
+
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchLabels:
+                app.kubernetes.io/name: metrics-server
+            topologyKey: kubernetes.io/hostname
+
+  serviceMonitor:
+    enabled: true
