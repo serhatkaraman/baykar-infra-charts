@@ -607,7 +607,6 @@ repoServer:
     - name: avp-helm
       command: [/var/run/argocd/argocd-cmp-server]
       image: quay.io/argoproj/argocd:v3.3.5
-      envFrom:
       env:
         - name: AVP_TYPE
           value: vault
