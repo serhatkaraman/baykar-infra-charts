@@ -191,11 +191,7 @@ extraObjects:
             repoURL: "https://github.com/serhatkaraman/baykar-infra-charts"
             revision: master
             files:
-              - path: "*/Chart.yaml"
-              - path: "argocd/Chart.yaml"
-                exclude: true
-              - path: "vault/Chart.yaml"
-                exclude: true
+              - path: "kube-prometheus-stack/Chart.yaml"
       template:
         metadata:
           name: 'baykar-case-{{ "{{" }} index .path.segments 0 {{ "}}" }}'
