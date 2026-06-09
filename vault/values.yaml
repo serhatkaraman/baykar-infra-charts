@@ -64,13 +64,13 @@ vault:
             - vault.myturkishdish.com
 
     dataStorage:
-      enabled: true
+      enabled: false
       size: 2Gi
       storageClass: csi-disk-topology
       accessMode: ReadWriteOnce
 
     auditStorage:
-      enabled: true
+      enabled: false
       size: 3Gi
       storageClass: csi-disk-topology
       accessMode: ReadWriteOnce
