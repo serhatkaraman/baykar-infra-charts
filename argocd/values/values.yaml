@@ -608,11 +608,11 @@ repoServer:
             - ALL
       resources:
         requests:
-          cpu: 50m
-          memory: 128Mi
-        limits:
-          cpu: 500m
+          cpu: 100m
           memory: 256Mi
+        limits:
+          cpu: 1000m
+          memory: 512Mi
       volumeMounts:
         - mountPath: /var/run/argocd
           name: var-files
