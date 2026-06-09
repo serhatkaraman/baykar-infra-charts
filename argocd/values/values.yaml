@@ -223,6 +223,7 @@ extraObjects:
               - path: "loki/Chart.yaml"
               - path: "alloy/Chart.yaml"
               - path: "metrics-server/Chart.yaml"
+              - path: "cert-manager/Chart.yaml"
       template:
         metadata:
           name: 'baykar-case-{{ "{{" }} index .path.segments 0 {{ "}}" }}'
