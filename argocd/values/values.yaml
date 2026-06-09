@@ -664,7 +664,7 @@ repoServer:
 
   serviceAccount:
     create: true
-    name: ""
+    name: argocd-repo-server
     annotations: {}
     labels: {}
     automountServiceAccountToken: true
