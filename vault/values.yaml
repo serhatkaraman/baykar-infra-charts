@@ -75,50 +75,34 @@ vault:
       storageClass: local-path
       accessMode: ReadWriteOnce
 
+    standalone:
+      enabled: true
+      config: |
+        ui = true
+
+        listener "tcp" {
+          tls_disable = 1
+          address = "[::]:8200"
+          cluster_address = "[::]:8201"
+          telemetry {
+            unauthenticated_metrics_access = "true"
+          }
+        }
+
+        storage "file" {
+          path = "/vault/data"
+        }
+
+        telemetry {
+          prometheus_retention_time = "30s"
+          disable_hostname = true
+        }
+
     # Phase 1: Single replica, no retry_join - init first
     # Phase 2: Scale to 3 replicas with retry_join and auto-unseal after init
     ha:
       enabled: false
-      replicas: 3
-      raft:
-        enabled: true
-        setNodeId: true
-        config: |
-          ui = true
-
-          listener "tcp" {
-            tls_disable = 1
-            address = "[::]:8200"
-            cluster_address = "[::]:8201"
-            telemetry {
-              unauthenticated_metrics_access = "true"
-            }
-          }
-
-          storage "raft" {
-            path = "/vault/data"
-            retry_join {
-              leader_api_addr = "http://baykar-case-vault-0.baykar-case-vault-internal:8200"
-            }
-            retry_join {
-              leader_api_addr = "http://baykar-case-vault-1.baykar-case-vault-internal:8200"
-            }
-            retry_join {
-              leader_api_addr = "http://baykar-case-vault-2.baykar-case-vault-internal:8200"
-            }
-          }
-
-          telemetry {
-            prometheus_retention_time = "30s"
-            disable_hostname = true
-          }
-
-          service_registration "kubernetes" {}
-
-      disruptionBudget:
-        enabled: true
-        maxUnavailable: 1
-
+      
     affinity: ""
 
     authDelegator:
