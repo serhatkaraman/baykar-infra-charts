@@ -43,7 +43,7 @@ vault:
       timeoutSeconds: 3
 
     livenessProbe:
-      enabled: true
+      enabled: false
       path: "/v1/sys/health?standbyok=true"
       port: 8200
       failureThreshold: 3
