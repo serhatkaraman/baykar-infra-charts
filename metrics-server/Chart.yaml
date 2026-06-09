@@ -1,7 +1,7 @@
 apiVersion: v2
 name: metrics-server
 version: 0.1.0
-description: Kubernetes metrics-server for infoset-prod
+description: Kubernetes metrics-server for baykar-case
 dependencies:
   - name: metrics-server
     version: 3.12.2

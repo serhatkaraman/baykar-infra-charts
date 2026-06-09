@@ -1,7 +1,7 @@
 apiVersion: v2
 name: alloy
 version: 0.1.0
-description: Grafana Alloy log shipper for infoset-stg
+description: Grafana Alloy log shipper for baykar-case
 dependencies:
   - name: alloy
     version: 0.9.2

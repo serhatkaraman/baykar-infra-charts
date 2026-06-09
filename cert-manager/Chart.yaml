@@ -1,7 +1,7 @@
 apiVersion: v2
 name: cert-manager
 version: 0.1.0
-description: cert-manager + Let's Encrypt ClusterIssuers for infoset-stg
+description: cert-manager + Let's Encrypt ClusterIssuers for baykar-case
 dependencies:
   - name: cert-manager
     version: v1.16.2

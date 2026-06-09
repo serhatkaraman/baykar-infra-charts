@@ -1,7 +1,7 @@
 apiVersion: v2
 name: kube-prometheus-stack
 version: 0.1.0
-description: kube-prometheus-stack for infoset-dev
+description: kube-prometheus-stack for baykar-case
 dependencies:
   - name: kube-prometheus-stack
     version: 82.14.1
