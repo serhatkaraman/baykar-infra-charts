@@ -8,25 +8,14 @@ loki:
       configs:
         - from: "2024-04-01"
           store: tsdb
-          object_store: s3
+          object_store: filesystem
           schema: v13
           index:
             prefix: loki_index_
             period: 24h
 
     storage:
-      type: s3
-      bucketNames:
-        chunks: baykar-case-loki
-        ruler: baykar-case-loki
-        admin: baykar-case-loki
-      s3:
-        endpoint: obs.tr-west-1.myhuaweicloud.com
-        region: tr-west-1
-        accessKeyId: <path:secret/data/argocd#baykar-case-loki-obs-access-key>
-        secretAccessKey: <path:secret/data/argocd#baykar-case-loki-obs-secret-key>
-        s3ForcePathStyle: false
-        insecure: false
+      type: filesystem
 
     commonConfig:
       replication_factor: 1
@@ -51,7 +40,7 @@ loki:
 
     compactor:
       retention_enabled: true
-      delete_request_store: s3
+      delete_request_store: filesystem
       working_directory: /var/loki/compactor
 
     server:
@@ -63,14 +52,14 @@ loki:
     persistence:
       enabled: true
       size: 3Gi
-      storageClass: csi-disk-topology
+      storageClass: local-path
     resources:
       requests:
-        cpu: 500m
-        memory: 1Gi
+        cpu: 100m
+        memory: 256Mi
       limits:
-        cpu: 2000m
-        memory: 4Gi
+        cpu: 500m
+        memory: 512Mi
     readinessProbe:
       httpGet:
         path: /ready
@@ -110,15 +99,6 @@ loki:
       resolver: "coredns.kube-system.svc.cluster.local."
     ingress:
       enabled: false
-      ingressClassName: internal-ingress-nginx
-      annotations:
-        nginx.ingress.kubernetes.io/ssl-redirect: "false"
-        nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
-      hosts:
-        - host: loki-stg.shared-services.local
-          paths:
-            - path: /
-              pathType: Prefix
 
   monitoring:
     serviceMonitor:
