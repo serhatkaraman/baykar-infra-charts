@@ -1,0 +1,11 @@
+apiVersion: v2
+name: mongodb
+version: 0.1.0
+description: MongoDB Community Operator for baykar-case
+dependencies:
+  - name: community-operator-crds
+    version: 0.13.0
+    repository: https://mongodb.github.io/helm-charts
+  - name: community-operator
+    version: 0.13.0
+    repository: https://mongodb.github.io/helm-charts
