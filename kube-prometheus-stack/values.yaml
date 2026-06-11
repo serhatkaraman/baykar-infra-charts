@@ -115,10 +115,10 @@ kube-prometheus-stack:
       resources:
         requests:
           cpu: 100m
-          memory: 256Mi
+          memory: 512Mi
         limits:
           cpu: 500m
-          memory: 512Mi
+          memory: 1024Mi
       storageSpec:
         volumeClaimTemplate:
           spec:
@@ -152,11 +152,11 @@ kube-prometheus-stack:
           timeout: 60
     resources:
       requests:
-        cpu: 50m
-        memory: 128Mi
+        cpu: 250m
+        memory: 512Mi
       limits:
-        cpu: 200m
-        memory: 256Mi
+        cpu: 500m
+        memory: 1024Mi
     persistence:
       enabled: true
       size: 3Gi
